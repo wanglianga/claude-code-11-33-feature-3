@@ -170,3 +170,168 @@ CREATE INDEX IF NOT EXISTS idx_fact_package ON raw_fact(package_id);
 CREATE INDEX IF NOT EXISTS idx_edge_run ON lineage_edge(run_id);
 CREATE INDEX IF NOT EXISTS idx_gap_run ON evidence_gap(run_id);
 CREATE INDEX IF NOT EXISTS idx_candidate_record ON identity_candidate(identity_record_id);
+
+-- ============================================================================
+-- 替代目录语义对齐与适用性声明质量服务
+-- 边界：只解释替代目录“能否用于”已发布批次范围的质量分析；
+-- 不推荐机构用药、不计算库存/需求/调拨量、不生成处方或调拨指令。
+-- ============================================================================
+
+-- 已发布批次范围：仅提供待分析的产品标识与生效日期
+CREATE TABLE IF NOT EXISTS batch_scope (
+    id              BIGSERIAL PRIMARY KEY,
+    scope_code      TEXT NOT NULL UNIQUE,
+    scope_name      TEXT NOT NULL,
+    effective_from  TIMESTAMPTZ NOT NULL,
+    effective_to    TIMESTAMPTZ,
+    remark          TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS scope_target (
+    id                   BIGSERIAL PRIMARY KEY,
+    scope_id             BIGINT NOT NULL REFERENCES batch_scope(id) ON DELETE CASCADE,
+    target_product_code  TEXT NOT NULL,
+    target_product_name  TEXT NOT NULL,
+    target_spec          JSONB NOT NULL DEFAULT '{}'::jsonb,  -- 目标产品受控规格（剂型/浓度/途径/无菌/人群）
+    UNIQUE (scope_id, target_product_code)
+);
+
+-- 目录受理器：供应商目录、药典引用、规格变更通知的原始版本、来源位置与生效期间
+CREATE TABLE IF NOT EXISTS catalog_document (
+    id                    BIGSERIAL PRIMARY KEY,
+    doc_code              TEXT NOT NULL UNIQUE,
+    doc_type              TEXT NOT NULL,   -- SUPPLIER_CATALOG / PHARMACOPOEIA_REFERENCE / SPEC_CHANGE_NOTICE
+    source_name           TEXT NOT NULL,
+    source_revision       TEXT NOT NULL,
+    source_location       TEXT NOT NULL,                   -- 来源位置（文件/章节/页码/链接）
+    payload_hash          TEXT NOT NULL,
+    raw_payload           JSONB NOT NULL,                  -- 原始载荷（内部可见）
+    received_at           TIMESTAMPTZ NOT NULL,
+    effective_from        TIMESTAMPTZ NOT NULL,
+    effective_to          TIMESTAMPTZ,                     -- 药典版本到期日；NULL 表示长期有效
+    supersedes_doc_code   TEXT,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 目录逻辑条目（同名异剂型保留为不同条目，禁止按名称归并）
+CREATE TABLE IF NOT EXISTS catalog_entry (
+    id                   BIGSERIAL PRIMARY KEY,
+    entry_code           TEXT NOT NULL UNIQUE,
+    product_name         TEXT NOT NULL,
+    manufacturer         TEXT,
+    target_product_code  TEXT,                              -- 被比对的目标产品
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 条目版本：包装层级/规格变化分别保留，分析请求按日期选择候选版本，不用当前包装覆盖历史
+CREATE TABLE IF NOT EXISTS catalog_entry_version (
+    id               BIGSERIAL PRIMARY KEY,
+    entry_id         BIGINT NOT NULL REFERENCES catalog_entry(id) ON DELETE CASCADE,
+    version_no       INTEGER NOT NULL,
+    doc_id           BIGINT NOT NULL REFERENCES catalog_document(id),
+    source_location  TEXT NOT NULL,
+    effective_from   TIMESTAMPTZ NOT NULL,
+    effective_to     TIMESTAMPTZ,
+    raw_record       JSONB NOT NULL DEFAULT '{}'::jsonb,
+    UNIQUE (entry_id, version_no)
+);
+
+-- 产品语义字典：剂型/浓度单位/包装层级/给药途径/人群限制/无菌等级拆为受控属性，每个归一化字段保留来源回链
+CREATE TABLE IF NOT EXISTS semantic_attribute (
+    id                 BIGSERIAL PRIMARY KEY,
+    entry_version_id   BIGINT NOT NULL REFERENCES catalog_entry_version(id) ON DELETE CASCADE,
+    attr_name          TEXT NOT NULL,  -- DOSAGE_FORM/CONCENTRATION/PACKAGE_LEVEL/PACKAGE_VOLUME/ROUTE/POPULATION_RESTRICTION/STERILITY_GRADE/EXCIPIENT
+    normalized_value   TEXT,
+    raw_value          TEXT,
+    attr_detail        JSONB NOT NULL DEFAULT '{}'::jsonb, -- 数值/单位/量纲/可换算标记
+    convertible        BOOLEAN NOT NULL DEFAULT true,      -- FALSE=单位不可换算（如 mg/mL 与 mg/支且缺包装体积）
+    source_doc_id      BIGINT NOT NULL REFERENCES catalog_document(id),
+    source_location    TEXT NOT NULL,
+    UNIQUE (entry_version_id, attr_name, source_doc_id)
+);
+
+-- 适用性声明册：可比较 / 仅可在附加条件下比较 / 不可比较（含待核降级态）
+CREATE TABLE IF NOT EXISTS suitability_statement (
+    id                     BIGSERIAL PRIMARY KEY,
+    statement_code         TEXT NOT NULL UNIQUE,
+    entry_version_id       BIGINT NOT NULL REFERENCES catalog_entry_version(id) ON DELETE CASCADE,
+    target_product_code    TEXT NOT NULL,
+    verdict                TEXT NOT NULL,   -- COMPARABLE / CONDITIONALLY_COMPARABLE / NOT_COMPARABLE / PENDING_REVIEW
+    review_status          TEXT NOT NULL,   -- DRAFT / PENDING_REVIEW / BLOCKED / APPROVED / REJECTED
+    basis                  JSONB NOT NULL DEFAULT '[]'::jsonb,  -- 属性级依据（逐条带回链）
+    conditions             JSONB NOT NULL DEFAULT '[]'::jsonb,  -- 附加条件（如辅料阈值、人群限制）
+    applicability_scope    TEXT,
+    evidence_completeness  NUMERIC(5,2) NOT NULL DEFAULT 0,     -- 证据完整度 0~100
+    reviewer               TEXT,
+    review_note            TEXT,
+    reviewed_at            TIMESTAMPTZ,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 矛盾审查器：规格冲突 / 单位换算不一致 / 限制缺失 / 过期药典 / 同名异剂型 / 包装层级变更
+CREATE TABLE IF NOT EXISTS catalog_conflict (
+    id                BIGSERIAL PRIMARY KEY,
+    conflict_code     TEXT NOT NULL UNIQUE,
+    conflict_type     TEXT NOT NULL, -- UNIT_INCONVERTIBLE/SPEC_CONFLICT/SAME_NAME_DIFF_FORM/MISSING_RESTRICTION/EXPIRED_PHARMACOPOEIA/PACKAGE_LEVEL_CHANGED
+    severity          TEXT NOT NULL,  -- BLOCKER / WARNING
+    entry_id          BIGINT REFERENCES catalog_entry(id) ON DELETE CASCADE,
+    entry_version_id  BIGINT REFERENCES catalog_entry_version(id) ON DELETE CASCADE,
+    subject_attr      TEXT,
+    description       TEXT NOT NULL,
+    source_refs       JSONB NOT NULL DEFAULT '[]'::jsonb,
+    status            TEXT NOT NULL DEFAULT 'OPEN', -- OPEN / RESOLVED
+    resolution        TEXT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at       TIMESTAMPTZ
+);
+
+-- 规则试验台：边界浓度/包装换算/同名异剂型/条件性限制反例
+CREATE TABLE IF NOT EXISTS counterexample_trial (
+    id                BIGSERIAL PRIMARY KEY,
+    trial_code        TEXT NOT NULL UNIQUE,
+    statement_id      BIGINT NOT NULL REFERENCES suitability_statement(id) ON DELETE CASCADE,
+    scenario_type     TEXT NOT NULL, -- BOUNDARY_CONCENTRATION/PACKAGE_CONVERSION/SAME_NAME_DIFF_FORM/CONDITIONAL_RESTRICTION
+    input_summary     TEXT NOT NULL,
+    expected_boundary TEXT,
+    result            TEXT NOT NULL, -- PASS / FAIL / UNVERIFIED
+    refutes_statement BOOLEAN NOT NULL DEFAULT false,
+    blocks_approval   BOOLEAN NOT NULL DEFAULT false,
+    evidence          JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 分析请求：批次范围 + 分析日期；发布视图以不可变快照保存
+CREATE TABLE IF NOT EXISTS analysis_request (
+    id            BIGSERIAL PRIMARY KEY,
+    request_code  TEXT NOT NULL UNIQUE,
+    scope_id      BIGINT NOT NULL REFERENCES batch_scope(id),
+    analysis_date TIMESTAMPTZ NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'PUBLISHED',
+    created_by    TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 发布视图条目：可用目录条目、受限原因、证据完整度、未决冲突、全量下钻
+CREATE TABLE IF NOT EXISTS analysis_published_item (
+    id                   BIGSERIAL PRIMARY KEY,
+    request_id           BIGINT NOT NULL REFERENCES analysis_request(id) ON DELETE CASCADE,
+    target_product_code  TEXT NOT NULL,
+    entry_code           TEXT,
+    entry_version_id     BIGINT,
+    statement_id         BIGINT,
+    effective_verdict    TEXT NOT NULL,  -- COMPARABLE / CONDITIONALLY_COMPARABLE / NOT_COMPARABLE / PENDING_REVIEW
+    restriction_reasons  JSONB NOT NULL DEFAULT '[]'::jsonb,
+    evidence_completeness NUMERIC(5,2) NOT NULL DEFAULT 0,
+    unresolved_conflicts JSONB NOT NULL DEFAULT '[]'::jsonb,
+    drilldown            JSONB NOT NULL DEFAULT '{}'::jsonb, -- 原始位置/受控属性/声明/反例/审核决定
+    UNIQUE (request_id, target_product_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_entry_version_entry ON catalog_entry_version(entry_id);
+CREATE INDEX IF NOT EXISTS idx_attr_version ON semantic_attribute(entry_version_id);
+CREATE INDEX IF NOT EXISTS idx_statement_version ON suitability_statement(entry_version_id);
+CREATE INDEX IF NOT EXISTS idx_conflict_entry ON catalog_conflict(entry_id);
+CREATE INDEX IF NOT EXISTS idx_trial_statement ON counterexample_trial(statement_id);
+CREATE INDEX IF NOT EXISTS idx_published_item_request ON analysis_published_item(request_id);

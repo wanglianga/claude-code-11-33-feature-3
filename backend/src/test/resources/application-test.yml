@@ -12,5 +12,7 @@ app:
   rule:
     current-parse-version: PARSE-2.0
     current-rule-version: RULE-2026.11
+  substitution:
+    as-of: 2026-11-15T12:00:00+08:00
   external:
     api-key: ext-trace-key-2026

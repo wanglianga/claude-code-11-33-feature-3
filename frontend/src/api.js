@@ -40,3 +40,44 @@ export const GRADE_LABELS = {
   PENDING: '待核',
   POSSIBLE: '可能受影响'
 }
+
+export const VERDICT_LABELS = {
+  COMPARABLE: '可比较',
+  CONDITIONALLY_COMPARABLE: '仅可在附加条件下比较',
+  NOT_COMPARABLE: '不可比较',
+  PENDING_REVIEW: '待核（降级）'
+}
+
+export const REVIEW_LABELS = {
+  DRAFT: '草稿',
+  PENDING_REVIEW: '待审核',
+  BLOCKED: '已阻断',
+  APPROVED: '已通过',
+  REJECTED: '已驳回'
+}
+
+export const CONFLICT_LABELS = {
+  UNIT_INCONVERTIBLE: '单位不可换算',
+  SPEC_CONFLICT: '规格冲突',
+  SAME_NAME_DIFF_FORM: '同名异剂型',
+  MISSING_RESTRICTION: '限制条件缺失',
+  EXPIRED_PHARMACOPOEIA: '过期药典引用',
+  PACKAGE_LEVEL_CHANGED: '包装层级变更'
+}
+
+export const TRIAL_LABELS = {
+  BOUNDARY_CONCENTRATION: '边界浓度反例',
+  PACKAGE_CONVERSION: '包装换算反例',
+  SAME_NAME_DIFF_FORM: '同名异剂型反例',
+  CONDITIONAL_RESTRICTION: '条件性限制反例'
+}
+
+export const ATTR_LABELS = {
+  DOSAGE_FORM: '剂型',
+  CONCENTRATION: '浓度/单位',
+  PACKAGE_LEVEL: '包装层级',
+  ROUTE: '给药途径',
+  POPULATION_RESTRICTION: '人群限制',
+  STERILITY_GRADE: '无菌等级',
+  EXCIPIENT: '辅料'
+}

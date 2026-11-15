@@ -5,6 +5,9 @@ import RunDetailView from './views/RunDetailView.vue'
 import BatchTraceView from './views/BatchTraceView.vue'
 import ReleasesView from './views/ReleasesView.vue'
 import ExternalView from './views/ExternalView.vue'
+import CatalogIntakeView from './views/CatalogIntakeView.vue'
+import StatementReviewView from './views/StatementReviewView.vue'
+import AnalysisPublishView from './views/AnalysisPublishView.vue'
 
 export default createRouter({
   history: createWebHashHistory(),
@@ -15,6 +18,9 @@ export default createRouter({
     { path: '/runs/:id', component: RunDetailView, name: 'run-detail', props: true },
     { path: '/runs/:id/batches/:batchCode', component: BatchTraceView, name: 'batch-trace', props: true },
     { path: '/releases', component: ReleasesView, name: 'releases' },
-    { path: '/external', component: ExternalView, name: 'external' }
+    { path: '/external', component: ExternalView, name: 'external' },
+    { path: '/substitution/catalog', component: CatalogIntakeView, name: 'sub-catalog' },
+    { path: '/substitution/statements', component: StatementReviewView, name: 'sub-statements' },
+    { path: '/substitution/publish', component: AnalysisPublishView, name: 'sub-publish' }
   ]
 })

@@ -24,6 +24,9 @@ app:
     # 当前解析/规则版本；核验时按截止时间快照判定
     current-parse-version: PARSE-2.0
     current-rule-version: RULE-2026.11
+  substitution:
+    # 替代目录矛盾审查的“当前时点”：药典是否过期按该时点判定
+    as-of: 2026-11-15T12:00:00+08:00
   external:
     # 外部处置系统接入密钥（仅可访问脱敏范围摘要）
     api-key: ${EXTERNAL_API_KEY:ext-trace-key-2026}
