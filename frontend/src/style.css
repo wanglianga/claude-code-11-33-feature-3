@@ -1,0 +1,186 @@
+:root {
+  --bg: #0f1623;
+  --panel: #172234;
+  --panel-2: #1d2b42;
+  --line: #2a3b57;
+  --text: #e6edf7;
+  --muted: #93a4bd;
+  --primary: #4f8cff;
+  --primary-soft: #274470;
+  --green: #2fbf71;
+  --amber: #e8a33d;
+  --red: #e5534b;
+  --purple: #a371f7;
+  --cyan: #39c5cf;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 232px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 20px 14px;
+  flex-shrink: 0;
+}
+.sidebar h1 {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0 0 4px;
+}
+.sidebar .sub { color: var(--muted); font-size: 12px; margin-bottom: 22px; }
+.sidebar nav a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.sidebar nav a:hover { background: var(--panel-2); text-decoration: none; }
+.sidebar nav a.router-link-active { background: var(--primary-soft); color: #fff; }
+
+.content { flex: 1; padding: 26px 30px; max-width: 1500px; }
+
+.page-title { font-size: 20px; margin: 0 0 4px; }
+.page-desc { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 18px;
+}
+.card h3 { margin: 0 0 14px; font-size: 15px; }
+.card h4 { margin: 16px 0 8px; font-size: 13px; color: var(--muted); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td {
+  text-align: left;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+.btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn:hover { filter: brightness(1.1); }
+.btn.secondary { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+input, select {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 9px 11px;
+  font-size: 13px;
+  outline: none;
+}
+input:focus, select:focus { border-color: var(--primary); }
+label.field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+
+.form-row { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+
+.tag {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.tag.green { background: rgba(47, 191, 113, .16); color: var(--green); }
+.tag.amber { background: rgba(232, 163, 61, .16); color: var(--amber); }
+.tag.red { background: rgba(229, 83, 75, .16); color: var(--red); }
+.tag.purple { background: rgba(163, 113, 247, .16); color: var(--purple); }
+.tag.cyan { background: rgba(57, 197, 207, .16); color: var(--cyan); }
+.tag.gray { background: rgba(147, 164, 189, .16); color: var(--muted); }
+
+.mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.small { font-size: 12px; color: var(--muted); }
+.muted { color: var(--muted); }
+.right { text-align: right; }
+.nowrap { white-space: nowrap; }
+
+.qty-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; min-width: 120px; background: var(--panel-2); }
+.qty-bar .c { background: var(--green); }
+.qty-bar .p { background: var(--amber); }
+.qty-bar .o { background: rgba(229,83,75,.55); }
+
+pre.payload {
+  background: #0b111c;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 340px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #b9c7dd;
+}
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.stat { background: var(--panel-2); border-radius: 8px; padding: 14px; }
+.stat .num { font-size: 22px; font-weight: 700; }
+.stat .lbl { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.tabs button {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 7px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tabs button.active { background: var(--primary-soft); color: #fff; border-color: var(--primary); }
+
+.gap-item { border-left: 3px solid var(--red); padding: 10px 12px; background: var(--panel-2); border-radius: 0 8px 8px 0; margin-bottom: 10px; }
+.gap-item.warning { border-left-color: var(--amber); }
+.gap-item .blocks { color: var(--amber); font-size: 12px; margin-top: 6px; }
+
+.graph-svg { width: 100%; height: 460px; background: #0b111c; border-radius: 8px; border: 1px solid var(--line); }
+.node-rect { fill: var(--panel-2); stroke: var(--line); stroke-width: 1; }
+.node-rect.affected { stroke: var(--red); }
+.node-rect.ambiguous { stroke: var(--purple); }
+.edge-line { stroke: var(--muted); stroke-width: 1.4; fill: none; }
+.edge-line.suspected { stroke: var(--amber); stroke-dasharray: 5 4; }
+.edge-line.frozen { stroke: var(--red); stroke-dasharray: 2 3; }
+.edge-label { fill: var(--muted); font-size: 10px; }
+.node-label { fill: var(--text); font-size: 11px; }
+
+.breadcrumb { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+.breadcrumb a { color: var(--muted); }
+.breadcrumb a:hover { color: var(--primary); }
+
+.toast {
+  position: fixed; right: 24px; bottom: 24px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  padding: 12px 18px; border-radius: 8px; z-index: 50;
+}
+.toast.error { border-left-color: var(--red); }

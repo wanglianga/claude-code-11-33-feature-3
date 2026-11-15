@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: drug-batch-genealogy-recall
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5432}/${DB_NAME:ccdev}
+    username: ${DB_USER:ccdev}
+    password: ${DB_PASSWORD:ccdev}
+    driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      continue-on-error: false
+  jackson:
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
+
+app:
+  rule:
+    # 当前解析/规则版本；核验时按截止时间快照判定
+    current-parse-version: PARSE-2.0
+    current-rule-version: RULE-2026.11
+  external:
+    # 外部处置系统接入密钥（仅可访问脱敏范围摘要）
+    api-key: ${EXTERNAL_API_KEY:ext-trace-key-2026}

@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/ccdev?currentSchema=recall_test
+    username: ccdev
+    password: ccdev
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+app:
+  rule:
+    current-parse-version: PARSE-2.0
+    current-rule-version: RULE-2026.11
+  external:
+    api-key: ext-trace-key-2026
